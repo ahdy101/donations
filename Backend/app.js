@@ -3,8 +3,7 @@ const path = require('path');
 const morgan = require('morgan');
 const cors = require('cors');
 const { pool } = require('../backend/db/db');
-const userAuth = require('../Backend/routes/userAuth')
-
+const userAuth = require('../Backend/routes/userAuth');
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -14,7 +13,7 @@ app.use(cors());
 app.use(morgan('tiny'));
 app.use(express.json());
 
-// Serve frontend files
+// Serve frontend files (uncomment and adjust if needed)
 // app.use(express.static(path.join(__dirname, 'Frontend')));
 
 // Backend routes
