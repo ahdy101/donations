@@ -1,103 +1,103 @@
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcrypt');
-const secretKey = 'your-secret-key'; // Replace with your actual secret key
+const { createUser, getUserByEmail } = require('../models/usermodels'); // Import the createUser and getUserByEmail functions
+const secretKey = process.env.JWT_SECRET || 'default-secret-key';
 const saltRounds = 10;
 
-// Mock user data for demonstration purposes
-const mockUser = {
-  username: 'demo_user',
-  password: '$2b$10$yKcbD6ZZV2ylwT96B3FiVe5JnlvVhAPgqWJ/8U5A1tSTmKlW5UMfS', // Hashed password
-};
-
-// Function to create a new user (replace this with your actual user creation logic)
-async function createUser(username, password) {
-  // Replace this with your actual user creation logic, including password hashing
-  const hashedPassword = await bcrypt.hash(password, saltRounds);
-  // Store user data in your database or any other storage mechanism
-  // For demonstration, we'll just return the hashed password
-  return { username, password: hashedPassword };
+async function hashPassword(password) {
+  return await bcrypt.hash(password, saltRounds);
 }
 
-// Authentication middleware function
+async function createUserAndHashPassword(username, password, role) {
+  try {
+    const hashedPassword = await hashPassword(password);
+    const newUser = await createUser(username, hashedPassword, role);
+    return newUser;
+  } catch (error) {
+    throw error;
+  }
+}
+
 async function authenticateUser(req, res, next) {
   try {
-    // Get the token from the request headers
-    const token = req.headers.authorization.split(' ')[1]; // Assuming token is in the 'Authorization' header
+    const token = req.headers.authorization?.split(' ')[1];
 
-    // Verify the token
+    if (!token) {
+      throw new Error('No token provided');
+    }
+
     const decoded = jwt.verify(token, secretKey);
 
-    // You can optionally perform additional checks here, e.g., user role validation
-
-    // Attach user information to the request for use in protected routes
     req.userData = decoded;
-
-    // User is authenticated, proceed to the protected route
     next();
   } catch (error) {
-    // Authentication failed; send an error response
-    res.status(401).json({ message: 'Authentication failed' });
+    console.error('Authentication failed:', error.message);
+    res.status(401).json({ message: 'Authentication failed', error: error.message });
   }
 }
 
-// Function to check user credentials (replace this with your actual user retrieval logic)
-async function checkUserCredentials(username, password) {
-  // Replace this with your actual user retrieval logic
-  if (username === mockUser.username && await bcrypt.compare(password, mockUser.password)) {
-    return true;
-  }
-  return false;
-}
-
-// Register new user route
 async function registerUser(req, res) {
-  const { username, password } = req.body;
+  const { username, password, role } = req.body;
 
   try {
-    // Check if the username is already taken (replace this with your actual logic)
-    const isUsernameTaken = username === mockUser.username;
+    const isUsernameTaken = await checkIfUsernameTaken(username);
 
     if (isUsernameTaken) {
-      res.status(400).json({ message: 'Username is already taken' });
-    } else {
-      // Create a new user
-      const newUser = await createUser(username, password);
-
-      // Generate JWT token upon successful registration
-      const token = jwt.sign({ username }, secretKey, { expiresIn: '1h' });
-
-      // Send success response with token
-      res.status(201).json({ message: 'User registered successfully', token });
+      return res.status(400).json({ message: 'Username is already taken' });
     }
+
+    let newUser;
+
+    if (role === 'admin' && username === 'admin' && password === 'adminPassword') {
+      // Special case for creating an admin user
+      newUser = await createUserAndHashPassword(username, password, 'admin');
+    } else if (role === 'organization') {
+      // Logic for creating an organization user
+      newUser = await createUserAndHashPassword(username, password, 'organization');
+    } else {
+      // Default case for creating a normal user
+      newUser = await createUserAndHashPassword(username, password, 'user');
+    }
+
+    const token = jwt.sign({ username, role: newUser.userRole }, secretKey, { expiresIn: '1h' });
+    res.status(201).json({ message: 'User registered successfully', token, role: newUser.userRole });
   } catch (error) {
-    console.error(error);
+    console.error('Error during user registration:', error);
     res.status(500).json({ message: 'Internal server error' });
   }
 }
 
-// Login user route
 async function loginUser(req, res) {
   const { username, password } = req.body;
 
   try {
-    const isCredentialsValid = await checkUserCredentials(username, password);
+    const user = await getUserByEmail(username);
 
-    if (isCredentialsValid) {
-      // Generate JWT token upon successful authentication
-      const token = jwt.sign({ username }, secretKey, { expiresIn: '1h' });
-
-      // Send success response with token
-      res.status(200).json({ token });
-    } else {
+    if (!user || !(await bcrypt.compare(password, user.password_hash))) {
       res.status(401).json({ message: 'Authentication failed' });
+      return;
     }
+
+    const token = jwt.sign({ username: user.username, role: user.userRole }, secretKey, { expiresIn: '1h' });
+    res.status(200).json({ token, role: user.userRole });
   } catch (error) {
+    console.error('Error during user login:', error);
     res.status(500).json({ message: 'Internal server error' });
   }
 }
 
+async function checkIfUsernameTaken(username) {
+  try {
+    const user = await getUserByEmail(username);
+    return user !== null; // Returns true if a user with the given username exists
+  } catch (error) {
+    // Handle any potential errors during the database query
+    console.error('Error checking if username is taken:', error);
+    throw error;
+  }
+}
+
 module.exports = {
-  checkUserCredentials,
   authenticateUser,
   registerUser,
   loginUser,
