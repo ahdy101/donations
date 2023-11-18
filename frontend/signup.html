@@ -83,7 +83,7 @@
         <div class="col-lg-6 offset-lg-3">
           <div class="volunteer-form">
             <h2 style="color: white; text-align: center;">Signup</h2>
-            <form id="signupForm" action="/auth/register" method="POST">
+            <form id="signupForm" onsubmit="registerUser(event)">
               <div class="form-group">
                 <input type="text" name="fullName" class="form-control" placeholder="Full Name" required="required" />
               </div>
@@ -94,9 +94,9 @@
                 <input type="password" name="password" class="form-control" placeholder="Password" required="required" />
               </div>
               <div class="form-group">
-                <select name="userType" class="form-control" required="required">
+                <select name="role" class="form-control" required="required">
                   <option value="">Signup as:</option>
-                  <option value="single">Single</option>
+                  <option value="user">Single User</option>
                   <option value="organization">Organization</option>
                 </select>
               </div>
@@ -110,6 +110,7 @@
   </div>
   <!-- Signup Form End -->
   
+ 
     <!-- Footer Start -->
     <div class="footer">
         <div class="container">
@@ -175,6 +176,34 @@
     <!-- Footer End -->
 
     <script>
+    async function registerUser(event) {
+      event.preventDefault(); // Prevent the default form submission behavior
+  
+      const fullName = document.getElementsByName('fullName')[0].value;
+      const email = document.getElementsByName('email')[0].value;
+      const password = document.getElementsByName('password')[0].value;
+      const role = document.getElementsByName('role')[0].value;
+  
+      // Make a request to your backend API to register the user with the selected role
+      const response = await fetch('/auth/register', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ username: email, password, role }),
+      });
+  
+      const result = await response.json();
+  
+      // Handle the response (e.g., show a success message or error message)
+      if (response.ok) {
+        console.log('Registration successful:', result);
+      } else {
+        console.error('Registration failed:', result.message);
+      }
+    }
+
+  
         const links = document.querySelectorAll('.nav-item.nav-link');
         links.forEach(link => {
             link.addEventListener('click', () => {
