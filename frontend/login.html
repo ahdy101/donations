@@ -77,23 +77,25 @@
 <!-- Add space between navbar and volunteer form -->
 <div class="spacer"></div>
 
-<!-- Volunteer Form Start -->
 <div class="volunteer" id="volunteer">
     <div class="container">
         <div class="row">
             <div class="col-lg-6 offset-lg-3">
                 <div class="volunteer-form">
                     <h2 style="color: white; text-align: center;">Login</h2>
-                    <div class="form-group">
-                        <input type="email" class="form-control" placeholder="Email" required="required" />
-                    </div>
-                    <div class="form-group">
-                        <input type="password" class="form-control" id="passwordInput" placeholder="Password" required="required" />
-                        <label for="showPassword">Show Password</label>
-                        <input type="checkbox" id="showPassword" onclick="togglePassword()" />
-                    </div>
-                    <button type="submit" class="btn btn-custom" style="color:white;color: black; display: block; margin: 0 auto;">Login</button>                    
+                    <form id="loginForm" onsubmit="loginUser(event)">
+                        <div class="form-group">
+                            <input type="email" id="emailInput" class="form-control" placeholder="Email" required="required" />
+                        </div>
+                        <div class="form-group">
+                            <input type="password" id="passwordInput" class="form-control" placeholder="Password" required="required" />
+                            <label for="showPassword">Show Password</label>
+                            <input type="checkbox" id="showPassword" onclick="togglePassword()" />
+                        </div>
+                        <button type="submit" class="btn btn-custom" style="color: black; display: block; margin: 0 auto;">Login</button>
+                    </form>
                     <p style="text-align: center;">Don't have an account? <a href="signup.html" style="color: white; transition: color 0.3s; text-decoration: none;"><u>Sign up here</u></a></p>
+                </div>
             </div>
         </div>
     </div>
@@ -171,6 +173,32 @@
                     link.classList.add('active');
                 });
             });
+            async function loginUser(event) {
+        event.preventDefault(); // Prevent the default form submission behavior
+
+        const email = document.getElementById('emailInput').value;
+        const password = document.getElementById('passwordInput').value;
+
+        // Make a request to your backend API to authenticate the user
+        const response = await fetch('/auth/login', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ username: email, password }),
+        });
+
+        const result = await response.json();
+
+        // Handle the response (e.g., show a success message or error message)
+        if (response.ok) {
+            console.log('Login successful:', result);
+            // Redirect the user to the dashboard or another page as needed
+        } else {
+            console.error('Login failed:', result.message);
+            // Display an error message to the user
+        }
+    }
         </script>
         
         <!-- Back to top button -->
